@@ -192,7 +192,7 @@ sub dateinbetween
 	return 0;
 	}
 	
-	1;
+1;
 
 __END__
 
@@ -202,75 +202,64 @@ DateTime::BusinessHours - An object that calculates business days and hours
 
 =head1 SYNOPSIS
 
-  use BusinessHours;
-  use DateTime;
+    my $d1 = DateTime->new( year => 2007, month => 10, day => 15 );
+    my $d2 = DateTime->now;
 
-  my $datetime1=DateTime->new(year=>2007,month=>10,day=>15);
-  my $datetime2 = DateTime->now;
+    my $test = DateTime:::BusinessHours->new(
+        datetime1 => $d1,
+        datetime2 => $d2,
+        worktiming => [ 9, 18 ], # 9am to 6pm
+        weekends => [ 6, 7 ], # Saturday and Sunday
+        holidays => [ '2007-10-31', '2007-12-24' ],
+        holidayfile => 'holidays.txt'
+        # holidayfile is a text file with each date in a new line
+        # in the format yyyy-mm-dd  
+   );
 
-  my $testing = BusinessHours->new(datetime1=>$datetime1,
-                                  datetime2=>$datetime2,
-                                  worktiming=>[9,18], # 9 am to 6 om
-                                  weekends=>[6,7], #saturday , sunday
-                                  holidays=>["2007-10-31",2007-12-24]
-                                  holidayfile=>'holidaylist' #holidaylist is a text file 
-                                                             #with each date in a new line
-                                                             #in the format yyyy-mm-dd  
-                                 );
-
-  print $testing->getdays."\n"; # the total business days 
-
-  print $testing->gethours; # the total business hours
-
+   print $test->getdays, "\n"; # the total business days 
+   print $test->gethours, "\n"; # the total business hours
 
 =head1 DESCRIPTION
 
-BusinessHours a class for caculating the business hours between two DateTime objects.It can be useful in situations like escalation where an action has to happen after a certain number of business hours.
+BusinessHours a class for caculating the business hours between two DateTime 
+objects. It can be useful in situations like escalation where an action has to 
+happen after a certain number of business hours.
 
-=head1 USAGE
+=head1 METHODS
 
-Create an instance of the class with the two required datetime objects. 
-and use the methods to get the business hours or days.
+=head2 new( %args )
 
-=head3 Constructors
+This class method accepts the following arguments as parameters:
 
 =over 4
 
-=item * new( ... )
+=item * datetime1 - Starting Date 
 
-This class method accepts the following parameters in the hash format.
+=item * datetime2 - Ending Date
 
-            datetime1    =>  Starting Date 
-            datetime2    =>  Ending Date
-            worktimings  =>  A list reference with two values.Starting and ending hour of the day.
-                             Defaults to [9,18] 
-            weekends     =>  A list reference with values of the days that must be considered 
-                             as non-working in a week.Defaults to [6,7] - Saturday , Sunday.
-            holidays     =>  A list reference with holiday dates.
-            holidayfile  =>  The name of a file from which predefined holidays can be excluded
-                             from business days /hours calculation. Defaults to no file.
+=item * worktiming - An array reference with two values: starting and ending hour of the day. Defaults to [9,18]
+
+=item * weekends - An array reference with values of the days that must be considered as non-working in a week.Defaults to [6,7] (Saturday & Sunday)
+
+=item * holidays - An array reference with holiday dates
+
+=item * holidayfile - The name of a file from which predefined holidays can be excluded from business days /hours calculation. Defaults to no file.
 
 =back
 
-=head3  Methods
-
-This class has two methods.
-
-=over 4
-
-=item * getdays
+=head2 getdays( )
 
 Returns the number of business days
 
-=item * gethours
+=head2 gethours( )
 
 Returns the number of business hours.
 
-=back
+=head2 dateinbetween( )
 
 =head1 AUTHOR
 
-Antano Solar John<solar345@gmail.com>
+Antano Solar John <solar345@gmail.com>
 
 =head1 COPYRIGHT
 
