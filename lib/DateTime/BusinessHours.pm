@@ -6,182 +6,205 @@ use DateTime;
 use integer;
 
 use Class::MethodMaker [
-    scalar => [ qw( datetime1 datetime2 worktiming weekends holidayfile holidays ) ],
+    scalar => [
+        qw( datetime1 datetime2 worktiming weekends holidayfile holidays )
+    ],
 ];
 
 our $VERSION = '1.01';
 
-sub new
-  {
-    my $self=shift;
-    my %args=@_;
-    my $datetime1 = $args{datetime1} || die "datetime1 parameter required";
-    my $datetime2 = $args{datetime2} || die "datetime2 parameter required";
-    my $worktiming = $args{worktiming} || [9,18];
-    my $weekends = $args{weekends} || [6,7];
-    my $holidays = $args{holidays} || "" ;
-    my $holidayfile = $args{holidayfile} || "";
-    return bless {datetime1=>$datetime1,datetime2=>$datetime2,worktiming=>$worktiming,weekends=>$weekends,holidays=>$holidays,holidayfile=>$holidayfile} , $self;
-  }
+sub new {
+    my $self       = shift;
+    my %args       = @_;
+    my $datetime1  = $args{ datetime1 } || die "datetime1 parameter required";
+    my $datetime2  = $args{ datetime2 } || die "datetime2 parameter required";
+    my $worktiming = $args{ worktiming } || [ 9, 18 ];
+    my $weekends   = $args{ weekends } || [ 6, 7 ];
+    my $holidays   = $args{ holidays } || "";
+    my $holidayfile = $args{ holidayfile } || "";
+    return bless {
+        datetime1   => $datetime1,
+        datetime2   => $datetime2,
+        worktiming  => $worktiming,
+        weekends    => $weekends,
+        holidays    => $holidays,
+        holidayfile => $holidayfile
+    }, $self;
+}
 
-sub getdays
+sub getdays {
+    my $self      = shift;
+    my $datediff  = $self->datetime2 - $self->datetime1;
+    my $days      = $datediff->delta_days;
+    my $noofweeks = $days / 7;
+    my $extradays = $days % 7;
+    my $startday  = $self->datetime1->day_of_week;
+
+    #exclude any day in the week marked as holiday (ex: saturday , sunday)
+    $days = $days - ( $noofweeks * ( $#{ $self->weekends } + 1 ) );
+
+#this is for the extra days that dont make up 7 days , to remove holidays from them
+    foreach ( @{ $self->weekends } ) {
+        if ( $startday == $_ ) {
+            $days = $days - 1;
+
+        }
+        else {
+            if ( $_ >= $startday ) {
+                if ( $startday + $extradays >= $_ ) {
+                    $days = $days - 1;
+
+                }
+            }
+            else {
+                if ( 7 - $startday + $extradays >= $_ ) {
+                    $days = $days - 1;
+
+                }
+            }
+        }
+    }
+
+    # Read company holiday's from the file
+    if ( $self->holidayfile ) {
+        open( HF, $self->holidayfile )
+            || warn "Predinfed holiday file not found";
+
+    #exclude any holidays that have been marked in the companies academic year
+    forHF: foreach ( <HF> ) {
+            my ( $year, $month, $day ) = split( '-', $_ );
+            my $holidate = DateTime->new( year => $year, month => $month,
+                day => $day );
+
+   #check if mentioned holiday lies in defined weekend , shouldnt deduct twice
+            foreach ( @{ $self->weekends } ) {
+                if ( $holidate->day_of_week == $_ ) {
+                    last forHF;
+                }
+                if ( dateinbetween( $holidate ) ) {
+                    $days = $days - 1;
+
+                }
+            }
+
+        }
+    }
+
+   #added to the new release to also allow holidays as reference needs testing
+    if ( $self->holidays ) {
+        my $holidays = $self->holidays;
+
+    forHS: foreach ( @$holidays ) {
+            my ( $year, $month, $day ) = split( '-', $_ );
+            my $holidate = DateTime->new( year => $year, month => $month,
+                day => $day );
+
+   #check if mentioned holiday lies in defined weekend , shouldnt deduct twice
+            foreach ( @{ $self->weekends } ) {
+                if ( $holidate->day_of_week == $_ ) {
+                    last forHS;
+                }
+                if ( dateinbetween( $holidate ) ) {
+                    $days = $days - 1;
+
+                }
+            }
+
+        }
+
+    }
+    return $days;
+
+}
+
+sub gethours {
+    my $self = shift;
+    my $days = $self->getdays;
+
+# (-2)To remove the start day and the last day as they may have different number
+#of working hours or none at all.
+    $days -= 2;
+    my $hoursinaday = $self->worktiming->[ 1 ] - $self->worktiming->[ 0 ];
+    my $hours       = $days * $hoursinaday;
+    my $hoursinfirstday;
+    my $hoursinlastday;
+
+    # To calculate working hours in the first day.
+    if ( $self->datetime1->hour < $self->worktiming->[ 0 ] ) {
+        $hoursinfirstday = $hoursinaday;
+    }
+    elsif ( $self->datetime1->hour > $self->worktiming->[ 1 ] ) {
+        $hoursinfirstday = 0;
+
+    }
+    else {
+        $hoursinfirstday = $self->worktiming->[ 1 ] - $self->datetime1->hour;
+    }
+
+    # To calculate working hours in the last day
+    if ( $self->datetime2->hour > $self->worktiming->[ 1 ] ) {
+        $hoursinlastday = $hoursinaday;
+    }
+
+    elsif ( $self->datetime2->hour < $self->worktiming->[ 0 ] ) {
+        $hoursinlastday = 0;
+
+    }
+    else {
+        $hoursinlastday = $self->datetime2->hour - $self->worktiming->[ 0 ];
+    }
+
+    $hours = $hours + $hoursinfirstday + $hoursinlastday;
+    return $hours;
+
+}
+
+sub dateinbetween {
+    my $self     = shift;
+    my $holidate = shift;
+
+#cant use >= and <= here as when it is true for  == and == condition,
+#months of the three dates  has to be checked for with similar conditions.
+#The same logic applies when checking for a date in between months
+#and on equalty  goes down to comparision on days.An alternate method could have been
+#converting the date to number of days from epouch and comparing them
+    if (    $holidate->year > $self->datetime1->year
+        and $holidate->year <= $self->datetime2->year )
     {
-      my $self = shift;
-      my $datediff=$self->datetime2-$self->datetime1;
-      my $days = $datediff->delta_days;
-      my $noofweeks = $days/7;
-      my $extradays = $days%7;
-      my $startday = $self->datetime1->day_of_week;
+        return 1;
+    }
+    if (    $holidate->year >= $self->datetime1->year
+        and $holidate->year < $self->datetime2->year )
+    {
+        return 1;
+    }
+    if (    $holidate->year == $self->datetime1->year
+        and $holidate->year == $self->datetime2->year )
+    {
+        if (    $holidate->month > $self->datetime1->month
+            and $holidate->month <= $self->datetime2->month )
+        {
+            return 1;
+        }
+        if (    $holidate->month >= $self->datetime1->month
+            and $holidate->month < $self->datetime2->month )
+        {
+            return 1;
 
-      #exclude any day in the week marked as holiday (ex: saturday , sunday)
-      $days = $days - ($noofweeks * ($#{$self->weekends}+1));  
+        }
+        if (    $holidate->month == $self->datetime1->month
+            and $holidate->month == $self->datetime2->month )
+        {
+            if (    $holidate->date >= $self->datetime1->day
+                and $holidate->day <= $self->datetime2->day )
+            {
+                return 1;
+            }
+        }
+    }
+    return 0;
+}
 
-      #this is for the extra days that dont make up 7 days , to remove holidays from them
-      foreach (@{$self->weekends}) {
-	if ($startday == $_) {
-	  $days = $days - 1;
-	  
-	}
-	else {
-	  if ($_ >= $startday) {
-	    if ($startday+$extradays >= $_) {
-	      $days = $days - 1;
-	      
-	    }
-	  }
-	  else {
-	    if (7-$startday+$extradays >= $_) {
-	      $days = $days -1;
-					       
-	    }
-	  }
-	}
-      }
-      # Read company holiday's from the file 
-      if ($self->holidayfile) {
-	open(HF , $self->holidayfile) || warn "Predinfed holiday file not found";
-	#exclude any holidays that have been marked in the companies academic year
-	forHF: foreach(<HF>)
-	  {
-	    my ($year , $month , $day) = split('-',$_);
-	    my $holidate = DateTime->new(year=>$year,month=>$month,day=>$day);
-	    #check if mentioned holiday lies in defined weekend , shouldnt deduct twice
-	    foreach (@{$self->weekends}) {
-	      if ($holidate->day_of_week==$_) {
-		last forHF 
-	      }
-	      if (dateinbetween($holidate)) {
-		$days = $days - 1;
-		
-	      }
-	    }
-
-
-	  }
-      }
-      
-	#added to the new release to also allow holidays as reference needs testing 
-	if ($self->holidays) {
-	  my $holidays = $self->holidays;
-	  
-	forHS: foreach(@$holidays)
-	    {
-	      my ($year , $month , $day) = split('-',$_);
-	      my $holidate = DateTime->new(year=>$year,month=>$month,day=>$day);
-	      #check if mentioned holiday lies in defined weekend , shouldnt deduct twice
-	      foreach (@{$self->weekends}) {
-		if ($holidate->day_of_week==$_) {
-		  last forHS 
-		}
-		if (dateinbetween($holidate)) {
-		  $days = $days - 1;
-		
-		}
-	      }
-
-
-	    }
-
-
-      }      
-      return $days;
-      
-  }          
-    
-sub gethours 
-      {
-	my $self=shift;
-	my $days=$self->getdays;
-
-	# (-2)To remove the start day and the last day as they may have different number
-	#of working hours or none at all.
-	$days -= 2;
-	my $hoursinaday = $self->worktiming->[1]-$self->worktiming->[0];
-	my $hours = $days * $hoursinaday;
-	my $hoursinfirstday;
-	my $hoursinlastday;
-	
-	# To calculate working hours in the first day.
-	if ($self->datetime1->hour < $self->worktiming->[0]) {
-	   $hoursinfirstday = $hoursinaday;
-	}
-	  elsif ($self->datetime1->hour > $self->worktiming->[1]) {
-	    $hoursinfirstday = 0;
-	    
-	  }
-	  else {
-	    $hoursinfirstday = $self->worktiming->[1]-$self->datetime1->hour;
-	    }
-	# To calculate working hours in the last day  
-	if ($self->datetime2->hour > $self->worktiming->[1]) {
-	   $hoursinlastday = $hoursinaday;
-	}
-	
-	  elsif ($self->datetime2->hour < $self->worktiming->[0]) {
-	    $hoursinlastday = 0;
-	    
-	  }
-	  else {
-	    $hoursinlastday = $self->datetime2->hour-$self->worktiming->[0];
-	    }
-	  
-	$hours = $hours + $hoursinfirstday + $hoursinlastday;
-	return $hours;
-	
-      }
-      
-sub dateinbetween
-	{
-	my $self = shift;
-	my $holidate = shift;
-	#cant use >= and <= here as when it is true for  == and == condition,
-	#months of the three dates  has to be checked for with similar conditions.
-	#The same logic applies when checking for a date in between months 
-	#and on equalty  goes down to comparision on days.An alternate method could have been 
-	#converting the date to number of days from epouch and comparing them
-	if ($holidate->year > $self->datetime1->year and $holidate->year <= $self->datetime2->year) {
-	  return 1;
-	  }
-	if ($holidate->year >= $self->datetime1->year and $holidate->year < $self->datetime2->year) {
-	  return 1;
-	  }
-	if ($holidate->year == $self->datetime1->year and $holidate->year == $self->datetime2->year) {
-	  if ($holidate->month > $self->datetime1->month and $holidate->month <= $self->datetime2->month) {
-	    return 1;
-	     }
-	  if ($holidate->month >= $self->datetime1->month and $holidate->month < $self->datetime2->month) {
-	    return 1;
-	    
-	  }
-	  if ($holidate->month == $self->datetime1->month and $holidate->month == $self->datetime2->month) {
-	    if ($holidate->date >= $self->datetime1->day and $holidate->day <= $self->datetime2->day) {
-	      return 1;
-	    }
-	  }
-	}
-	return 0;
-	}
-	
 1;
 
 __END__
