@@ -1,21 +1,15 @@
 package DateTime::BusinessHours;
-use DateTime;
 use strict;
 use warnings;
+
+use DateTime;
 use integer;
 
-use vars qw($VERSION);
+use Class::MethodMaker [
+    scalar => [ qw( datetime1 datetime2 worktiming weekends holidayfile holidays ) ],
+];
 
-BEGIN
-{
-    $VERSION = '1.01';
-  }
-
-
-use Class::MethodMaker
-    [ scalar => [qw/ datetime1 datetime2 worktiming weekends holidayfile holidays /],
-    
-    ];
+our $VERSION = '1.01';
 
 sub new
   {
@@ -28,8 +22,6 @@ sub new
     my $holidays = $args{holidays} || "" ;
     my $holidayfile = $args{holidayfile} || "";
     return bless {datetime1=>$datetime1,datetime2=>$datetime2,worktiming=>$worktiming,weekends=>$weekends,holidays=>$holidays,holidayfile=>$holidayfile} , $self;
-    
-    
   }
 
 sub getdays
@@ -115,8 +107,6 @@ sub getdays
       return $days;
       
   }          
-      
-      
     
 sub gethours 
       {
@@ -256,6 +246,36 @@ Returns the number of business days
 Returns the number of business hours.
 
 =head2 dateinbetween( )
+
+=head1 INSTALLATION
+
+To install this module, run the following commands:
+
+	perl Makefile.PL
+	make
+	make test
+	make install
+
+=head1 SUPPORT AND DOCUMENTATION
+
+After installing, you can find documentation for this module with the
+perldoc command.
+
+    perldoc DateTime::BusinessHours
+
+You can also look for information at:
+
+    RT, CPAN's request tracker
+        http://rt.cpan.org/NoAuth/Bugs.html?Dist=DateTime-BusinessHours
+
+    AnnoCPAN, Annotated CPAN documentation
+        http://annocpan.org/dist/DateTime-BusinessHours
+
+    CPAN Ratings
+        http://cpanratings.perl.org/d/DateTime-BusinessHours
+
+    Search CPAN
+        http://search.cpan.org/dist/DateTime-BusinessHours
 
 =head1 AUTHOR
 
