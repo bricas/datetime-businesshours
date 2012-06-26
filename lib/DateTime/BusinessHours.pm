@@ -245,7 +245,9 @@ Returns the number of business days
 
 Returns the number of business hours.
 
-=head2 dateinbetween( )
+=head2 dateinbetween( $date )
+
+Returns 1 if C<$date> is between the two dates supplied to the constructor.
 
 =head1 INSTALLATION
 
