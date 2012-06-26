@@ -1,0 +1,30 @@
+{
+   "abstract" : "Calculate Business Days / Hours",
+   "author" : [
+      "Antano Solar John <solar345@gmail.com>"
+   ],
+   "dynamic_config" : 0,
+   "generated_by" : "CPAN::Meta::Converter version 2.120921, CPAN::Meta::Converter version 2.120921",
+   "license" : [
+      "perl_5"
+   ],
+   "meta-spec" : {
+      "url" : "http://search.cpan.org/perldoc?CPAN::Meta::Spec",
+      "version" : "2"
+   },
+   "name" : "BusinessHours",
+   "prereqs" : {
+      "build" : {
+         "requires" : {
+            "ExtUtils::MakeMaker" : "0"
+         }
+      },
+      "runtime" : {
+         "requires" : {
+            "Test::More" : "0"
+         }
+      }
+   },
+   "release_status" : "stable",
+   "version" : "1.01"
+}

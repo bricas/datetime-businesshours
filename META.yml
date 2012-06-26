@@ -1,0 +1,10 @@
+--- #YAML:1.0
+name:                BusinessHours
+version:             1.01
+abstract:            Calculate Business Days / Hours
+license:             perl
+distribution_type:   module
+requires:     
+    DateTime:             
+author:
+    - Antano Solar John <solar345@gmail.com>
