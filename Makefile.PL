@@ -3,6 +3,10 @@ use warnings;
 
 use ExtUtils::MakeMaker;
 
+if ( -e 'MANIFEST.SKIP' ) {
+    system( 'pod2text lib/DateTime/BusinessHours.pm > README' );
+}
+
 WriteMakefile(
     DISTNAME            => 'DateTime-BusinessHours',
     NAME                => 'DateTime::BusinessHours',
