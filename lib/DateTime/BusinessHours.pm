@@ -196,10 +196,9 @@ sub dateinbetween
 
 __END__
 
-
 =head1 NAME
 
-BusinessHours - An object that calculates business days and hours 
+DateTime::BusinessHours - An object that calculates business days and hours 
 
 =head1 SYNOPSIS
 
@@ -251,6 +250,7 @@ This class method accepts the following parameters in the hash format.
             holidayfile  =>  The name of a file from which predefined holidays can be excluded
                              from business days /hours calculation. Defaults to no file.
 
+=back
 
 =head3  Methods
 
@@ -272,21 +272,14 @@ Returns the number of business hours.
 
 Antano Solar John<solar345@gmail.com>
 
-
 =head1 COPYRIGHT
 
 Copyright (c) 2007 Antano Solar John.  All rights reserved.  This
 program is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.
 
-
 The full text of the license can be found in the LICENSE file included
 with this module.
 
 =cut
 
-	
-      
-
-
-  
