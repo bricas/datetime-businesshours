@@ -13,4 +13,4 @@ my $t = DateTime::BusinessHours->new( datetime1 => $d1, datetime2 => $d2 );
 isa_ok( $t, 'DateTime::BusinessHours' );
 
 is( $t->getdays,  1, 'getdays' );
-is( $t->gethours, 9, 'gethours' );
+is( $t->gethours, 8, 'gethours' );

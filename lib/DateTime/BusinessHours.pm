@@ -33,12 +33,17 @@ sub new {
 }
 
 sub getdays {
-    my $self      = shift;
-    my $datediff  = $self->datetime2 - $self->datetime1;
-    my $days      = $datediff->delta_days;
+    my $self       = shift;
+    my $start_date = $self->datetime1;
+    my $end_date   = $self->datetime2;
+    ($start_date, $end_date) = ($end_date, $start_date) if
+        $start_date > $end_date;
+
+    my $days = $end_date->delta_days( $start_date )->in_units( 'days' );
+
     my $noofweeks = $days / 7;
     my $extradays = $days % 7;
-    my $startday  = $self->datetime1->day_of_week;
+    my $startday = $start_date->day_of_week;
 
     #exclude any day in the week marked as holiday (ex: saturday , sunday)
     $days = $days - ( $noofweeks * ( $#{ $self->weekends } + 1 ) );

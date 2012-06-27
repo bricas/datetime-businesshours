@@ -16,5 +16,5 @@ my $t = DateTime::BusinessHours->new(
 
 isa_ok( $t, 'DateTime::BusinessHours' );
 
-is( $t->getdays,  31,     'getdays' );
-is( $t->gethours, 31 * 9, 'gethours' );
+is( $t->getdays,  23,     'getdays' );
+is( $t->gethours, 23 * 8, 'gethours' );
