@@ -1,9 +1,9 @@
 package DateTime::BusinessHours;
+
 use strict;
 use warnings;
 
 use DateTime;
-use integer;
 
 use Class::MethodMaker [
     scalar => [
@@ -19,194 +19,146 @@ sub new {
     die 'datetime1 parameter required' if !$args{ datetime1 };
     die 'datetime2 parameter required' if !$args{ datetime2 };
 
-    $args{ worktiming } ||= [ 9, 18 ];
+    $args{ worktiming } ||= [ [ 9, 17 ] ];
     $args{ weekends }   ||= [ 6, 7 ];
+    $args{ holidays }   ||= [ ];
+
+    if( !ref @{ $args{ worktiming } }[ 0 ] ) {
+        $args{ worktiming } = [ [ @{ $args{ worktiming } } ] ];
+    }
 
     return bless \%args, $class;
 }
 
+sub calculate {
+    my $self = shift;
+    $self->{ _result } = undef;
+    $self->_calculate;
+}
+
+sub _calculate {
+    my $self = shift;
+
+    return $self->{ _result } if defined $self->{ _result };
+    $self->{ _result } = { days => 0, hours => 0 };
+
+    # number of hours in a work day
+    my $length = $self->_calculate_day_length;
+    my @holidays = $self->_get_holidays;
+    my $weekend_re = join( '|', @{ $self->weekends } );
+
+    my $d1 = $self->datetime1->clone;
+    my $d2 = $self->datetime2->clone;
+
+    # swap if "start" is more recent than "end"
+    ( $d1, $d2 ) = ( $d2, $d1 ) if $d1 > $d2;
+
+    my $start = $d1->clone->truncate( to => 'day' );
+    my $end   = $d2->clone->truncate( to => 'day' );
+
+    my $s_ymd = $start->ymd;
+    my $e_ymd = $end->ymd;
+
+    my %holiday_map = map { $_ => 1 } grep { $_ ge $s_ymd && $_ le $e_ymd } @holidays;
+
+    # deal with everything non-inclusive to the start/end
+    $start->add( days => 1 );
+    $end->subtract( days => 1 );
+
+    while( $start <= $end ) {
+        if( $start->day_of_week !~ m{$weekend_re} && !exists $holiday_map{ $start->ymd } ) {
+            $self->{ _result }->{ hours } += $length;
+        }
+
+        $start->add( days => 1 );
+    }
+
+    # handle start and end days
+    for( reverse @{ $self->{ _timing_norms } } ) {
+        last if $d1 >= $d1->clone->set( %{ $_->[ -1 ] } );
+
+        my $r1 = $d1->clone->set( %{ $_->[ 0 ] } );
+        my $r2 = $d1->clone->set( %{ $_->[ 1 ] } );
+
+        # full or partial range
+        $r1 = $d1 if $d1 > $r1;
+        $r2 = $d2 if $d2 < $r2; # only happens when $d1 and $d2 are on the same day
+
+        my $dur = $r2 - $r1;
+        $self->{ _result }->{ hours } += $dur->in_units( 'minutes' ) / 60;
+    }
+
+    # if start and end aren't on the same day
+    if( $d1->truncate( to => 'day' ) != $d2->truncate( to => 'day' ) ) {
+        for( @{ $self->{ _timing_norms } } ) {
+            last if $d2 <= $d2->clone->set( %{ $_->[ 0 ] } );
+
+            my $r1 = $d2->clone->set( %{ $_->[ 0 ] } );
+            my $r2 = $d2->clone->set( %{ $_->[ 1 ] } );
+
+            # full or partial range
+            $r2 = $d2 if $d2 < $r2;
+
+            my $dur = $r2 - $r1;
+            $self->{ _result }->{ hours } += $dur->in_units( 'minutes' ) / 60;
+        }
+    }
+
+    $self->{ _result }->{ days } = $self->{ _result }->{ hours } / $length;
+    return $self->{ _result };
+}
+
+# determine how many hours are in a business day
+sub _calculate_day_length {
+    my $self = shift;
+
+    $self->{ _day_length } = 0;
+    $self->{ _timing_norms } = [];
+
+    for my $i ( @{ $self->worktiming } ) {
+        push @{ $self->{ _timing_norms } }, [];
+        for( @$i ) {
+            # normalize input times
+            $_ = sprintf( '%02s00', $_ ) if length == 1 || length == 2;
+            $_ = sprintf( '%04s', $_ );
+
+            my( $h, $m ) = m{(..)(..)};
+
+            # normalize input times for use with DateTime
+            push $self->{ _timing_norms }->[ -1 ], { hour => $h, minute => $m };
+        }
+    }
+
+    for my $tn ( @{ $self->{ _timing_norms } } ) {
+        my $dur = DateTime->new( year => 2012, %{ $tn->[ 1 ] } )
+            - DateTime->new( year => 2012, %{ $tn->[ 0 ] } );
+        $self->{ _day_length } += $dur->in_units( 'minutes' ) / 60;
+    }
+
+    return $self->{ _day_length };
+}
+
+sub _get_holidays {
+    my $self = shift;
+
+    my @holidays = @{ $self->holidays };
+    my $filename = $self->holidayfile;
+
+    if( $filename && -e $filename ) {
+        open( my $fh, '<', $filename );
+        while ( <$fh> ) { chomp; push @holidays, $_ };
+        close $fh;
+    }
+
+    return @holidays;
+}
+
 sub getdays {
-    my $self       = shift;
-    my $start_date = $self->datetime1;
-    my $end_date   = $self->datetime2;
-    ( $start_date, $end_date ) = ( $end_date, $start_date )
-        if $start_date > $end_date;
-
-    my $days = $end_date->delta_days( $start_date )->in_units( 'days' );
-
-    my $noofweeks = $days / 7;
-    my $extradays = $days % 7;
-    my $startday  = $start_date->day_of_week;
-
-    #exclude any day in the week marked as holiday (ex: saturday , sunday)
-    $days = $days - ( $noofweeks * ( $#{ $self->weekends } + 1 ) );
-
-#this is for the extra days that dont make up 7 days , to remove holidays from them
-    foreach ( @{ $self->weekends } ) {
-        if ( $startday == $_ ) {
-            $days = $days - 1;
-
-        }
-        else {
-            if ( $_ >= $startday ) {
-                if ( $startday + $extradays >= $_ ) {
-                    $days = $days - 1;
-
-                }
-            }
-            else {
-                if ( 7 - $startday + $extradays >= $_ ) {
-                    $days = $days - 1;
-
-                }
-            }
-        }
-    }
-
-    # Read company holiday's from the file
-    if ( $self->holidayfile ) {
-        open( HF, $self->holidayfile )
-            || warn "Predinfed holiday file not found";
-
-    #exclude any holidays that have been marked in the companies academic year
-    forHF: foreach ( <HF> ) {
-            my ( $year, $month, $day ) = split( '-', $_ );
-            my $holidate = DateTime->new(
-                year  => $year,
-                month => $month,
-                day   => $day
-            );
-
-   #check if mentioned holiday lies in defined weekend , shouldnt deduct twice
-            foreach ( @{ $self->weekends } ) {
-                if ( $holidate->day_of_week == $_ ) {
-                    last forHF;
-                }
-                if ( dateinbetween( $holidate ) ) {
-                    $days = $days - 1;
-
-                }
-            }
-
-        }
-    }
-
-   #added to the new release to also allow holidays as reference needs testing
-    if ( $self->holidays ) {
-        my $holidays = $self->holidays;
-
-    forHS: foreach ( @$holidays ) {
-            my ( $year, $month, $day ) = split( '-', $_ );
-            my $holidate = DateTime->new(
-                year  => $year,
-                month => $month,
-                day   => $day
-            );
-
-   #check if mentioned holiday lies in defined weekend , shouldnt deduct twice
-            foreach ( @{ $self->weekends } ) {
-                if ( $holidate->day_of_week == $_ ) {
-                    last forHS;
-                }
-                if ( dateinbetween( $holidate ) ) {
-                    $days = $days - 1;
-
-                }
-            }
-
-        }
-
-    }
-    return $days;
-
+    return shift->_calculate->{ days };
 }
 
 sub gethours {
-    my $self = shift;
-    my $days = $self->getdays;
-
-# (-2)To remove the start day and the last day as they may have different number
-#of working hours or none at all.
-    $days -= 2;
-    my $hoursinaday = $self->worktiming->[ 1 ] - $self->worktiming->[ 0 ];
-    my $hours       = $days * $hoursinaday;
-    my $hoursinfirstday;
-    my $hoursinlastday;
-
-    # To calculate working hours in the first day.
-    if ( $self->datetime1->hour < $self->worktiming->[ 0 ] ) {
-        $hoursinfirstday = $hoursinaday;
-    }
-    elsif ( $self->datetime1->hour > $self->worktiming->[ 1 ] ) {
-        $hoursinfirstday = 0;
-
-    }
-    else {
-        $hoursinfirstday = $self->worktiming->[ 1 ] - $self->datetime1->hour;
-    }
-
-    # To calculate working hours in the last day
-    if ( $self->datetime2->hour > $self->worktiming->[ 1 ] ) {
-        $hoursinlastday = $hoursinaday;
-    }
-
-    elsif ( $self->datetime2->hour < $self->worktiming->[ 0 ] ) {
-        $hoursinlastday = 0;
-
-    }
-    else {
-        $hoursinlastday = $self->datetime2->hour - $self->worktiming->[ 0 ];
-    }
-
-    $hours = $hours + $hoursinfirstday + $hoursinlastday;
-    return $hours;
-
-}
-
-sub dateinbetween {
-    my $self     = shift;
-    my $holidate = shift;
-
-#cant use >= and <= here as when it is true for  == and == condition,
-#months of the three dates  has to be checked for with similar conditions.
-#The same logic applies when checking for a date in between months
-#and on equalty  goes down to comparision on days.An alternate method could have been
-#converting the date to number of days from epouch and comparing them
-    if (    $holidate->year > $self->datetime1->year
-        and $holidate->year <= $self->datetime2->year )
-    {
-        return 1;
-    }
-    if (    $holidate->year >= $self->datetime1->year
-        and $holidate->year < $self->datetime2->year )
-    {
-        return 1;
-    }
-    if (    $holidate->year == $self->datetime1->year
-        and $holidate->year == $self->datetime2->year )
-    {
-        if (    $holidate->month > $self->datetime1->month
-            and $holidate->month <= $self->datetime2->month )
-        {
-            return 1;
-        }
-        if (    $holidate->month >= $self->datetime1->month
-            and $holidate->month < $self->datetime2->month )
-        {
-            return 1;
-
-        }
-        if (    $holidate->month == $self->datetime1->month
-            and $holidate->month == $self->datetime2->month )
-        {
-            if (    $holidate->date >= $self->datetime1->day
-                and $holidate->day <= $self->datetime2->day )
-            {
-                return 1;
-            }
-        }
-    }
-    return 0;
+    return shift->_calculate->{ hours };
 }
 
 1;
@@ -225,16 +177,18 @@ DateTime::BusinessHours - An object that calculates business days and hours
     my $test = DateTime:::BusinessHours->new(
         datetime1 => $d1,
         datetime2 => $d2,
-        worktiming => [ 9, 18 ], # 9am to 6pm
+        worktiming => [ 9, 17 ], # 9am to 5pm
+        # lunch from 12 to 1
+        # worktiming => [ [ 9, 12 ], [ 13, 17 ] ],
         weekends => [ 6, 7 ], # Saturday and Sunday
         holidays => [ '2007-10-31', '2007-12-24' ],
         holidayfile => 'holidays.txt'
         # holidayfile is a text file with each date in a new line
         # in the format yyyy-mm-dd  
-   );
+    );
 
-   print $test->getdays, "\n"; # the total business days 
-   print $test->gethours, "\n"; # the total business hours
+    print $test->getdays, "\n"; # the total business days 
+    print $test->gethours, "\n"; # the total business hours
 
 =head1 DESCRIPTION
 
@@ -254,15 +208,27 @@ This class method accepts the following arguments as parameters:
 
 =item * datetime2 - Ending Date
 
-=item * worktiming - An array reference with two values: starting and ending hour of the day. Defaults to [9,18]
+=item * worktiming - May be one of the following:
+
+=over 4
+
+=item * An array reference with two values: starting and ending hour of the day
+
+=item * An array reference of array references. Each reference being a slice of the 24-hour clock where business is conducted. Useful if you want to leave a "lunch hour" out of the calculation. Defaults to [ [ 9, 17 ] ]
+
+=back
 
 =item * weekends - An array reference with values of the days that must be considered as non-working in a week.Defaults to [6,7] (Saturday & Sunday)
 
 =item * holidays - An array reference with holiday dates
 
-=item * holidayfile - The name of a file from which predefined holidays can be excluded from business days /hours calculation. Defaults to no file.
+=item * holidayfile - The name of a file from which predefined holidays can be excluded from business days /hours calculation. Defaults to no file
 
 =back
+
+=head2 calculate( )
+
+This will force a recalculation of the business hours and days. useful if you've changed any values (datetime1, datetime2, worktiming, etc) or updated the holiday file
 
 =head2 getdays( )
 
@@ -271,10 +237,6 @@ Returns the number of business days
 =head2 gethours( )
 
 Returns the number of business hours.
-
-=head2 dateinbetween( $date )
-
-Returns 1 if C<$date> is between the two dates supplied to the constructor.
 
 =head1 INSTALLATION
 
