@@ -187,8 +187,10 @@ DateTime::BusinessHours - An object that calculates business days and hours
         # in the format yyyy-mm-dd  
     );
 
-    print $test->getdays, "\n"; # the total business days 
-    print $test->gethours, "\n"; # the total business hours
+    # total business hours
+    print $test->gethours, "\n";
+    # total business days, based on the number of business hours in a day
+    print $test->getdays, "\n"; 
 
 =head1 DESCRIPTION
 
