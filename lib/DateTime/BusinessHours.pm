@@ -218,11 +218,11 @@ This class method accepts the following arguments as parameters:
 
 =back
 
-=item * weekends - An array reference with values of the days that must be considered as non-working in a week.Defaults to [6,7] (Saturday & Sunday)
+=item * weekends - An array reference with values of the days that must be considered as non-working in a week. Defaults to [6,7] (Saturday & Sunday)
 
-=item * holidays - An array reference with holiday dates
+=item * holidays - An array reference with holiday dates in 'yyyy-mm-dd' format
 
-=item * holidayfile - The name of a file from which predefined holidays can be excluded from business days /hours calculation. Defaults to no file
+=item * holidayfile - The name of a file from which predefined holidays can be excluded from business days/hours calculation. Defaults to no file
 
 =back
 
