@@ -1,8 +1,22 @@
-Revision history for DateTime-BusinessHours
+Revision history for perl module DateTime::BusinessHours
 
-1.01	Added holidays arrayref
-	Changed holidaysfile date format to yyyy-mm-dd
+2.00 TO BE RELEASED
+ [BUG FIXES]
+ - Added missing deps to Makefile.PL (RT #30787)
+ - Proper calculation for ranges longer than 1 month (RT #39433)
+ - Proper calculation for ranges starting and ending on the same day (RT
+   #34041)
 
-1.0    Date/time
-        First version.
+ [ENHANCEMENTS]
+ - Entirely rewritten from scratch
+ - "worktiming" now take multiple hour specifications
 
+ [THINGS THAT MAY BREAK YOUR CODE]
+ - Default business hours are now 9am to 5pm
+
+1.01 2007-11-11
+ - Added holidays arrayref
+ - Changed holidaysfile date format to yyyy-mm-dd
+
+1.0 2007-11-05
+ - First version
