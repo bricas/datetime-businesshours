@@ -14,36 +14,29 @@ use Class::MethodMaker [
 our $VERSION = '1.01';
 
 sub new {
-    my $self       = shift;
-    my %args       = @_;
-    my $datetime1  = $args{ datetime1 } || die "datetime1 parameter required";
-    my $datetime2  = $args{ datetime2 } || die "datetime2 parameter required";
-    my $worktiming = $args{ worktiming } || [ 9, 18 ];
-    my $weekends   = $args{ weekends } || [ 6, 7 ];
-    my $holidays   = $args{ holidays } || "";
-    my $holidayfile = $args{ holidayfile } || "";
-    return bless {
-        datetime1   => $datetime1,
-        datetime2   => $datetime2,
-        worktiming  => $worktiming,
-        weekends    => $weekends,
-        holidays    => $holidays,
-        holidayfile => $holidayfile
-    }, $self;
+    my ( $class, %args ) = @_;
+
+    die 'datetime1 parameter required' if !$args{ datetime1 };
+    die 'datetime2 parameter required' if !$args{ datetime2 };
+
+    $args{ worktiming } ||= [ 9, 18 ];
+    $args{ weekends }   ||= [ 6, 7 ];
+
+    return bless \%args, $class;
 }
 
 sub getdays {
     my $self       = shift;
     my $start_date = $self->datetime1;
     my $end_date   = $self->datetime2;
-    ($start_date, $end_date) = ($end_date, $start_date) if
-        $start_date > $end_date;
+    ( $start_date, $end_date ) = ( $end_date, $start_date )
+        if $start_date > $end_date;
 
     my $days = $end_date->delta_days( $start_date )->in_units( 'days' );
 
     my $noofweeks = $days / 7;
     my $extradays = $days % 7;
-    my $startday = $start_date->day_of_week;
+    my $startday  = $start_date->day_of_week;
 
     #exclude any day in the week marked as holiday (ex: saturday , sunday)
     $days = $days - ( $noofweeks * ( $#{ $self->weekends } + 1 ) );
@@ -78,8 +71,11 @@ sub getdays {
     #exclude any holidays that have been marked in the companies academic year
     forHF: foreach ( <HF> ) {
             my ( $year, $month, $day ) = split( '-', $_ );
-            my $holidate = DateTime->new( year => $year, month => $month,
-                day => $day );
+            my $holidate = DateTime->new(
+                year  => $year,
+                month => $month,
+                day   => $day
+            );
 
    #check if mentioned holiday lies in defined weekend , shouldnt deduct twice
             foreach ( @{ $self->weekends } ) {
@@ -101,8 +97,11 @@ sub getdays {
 
     forHS: foreach ( @$holidays ) {
             my ( $year, $month, $day ) = split( '-', $_ );
-            my $holidate = DateTime->new( year => $year, month => $month,
-                day => $day );
+            my $holidate = DateTime->new(
+                year  => $year,
+                month => $month,
+                day   => $day
+            );
 
    #check if mentioned holiday lies in defined weekend , shouldnt deduct twice
             foreach ( @{ $self->weekends } ) {
