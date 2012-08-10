@@ -125,7 +125,7 @@ sub _calculate_day_length {
             my( $h, $m ) = m{(..)(..)};
 
             # normalize input times for use with DateTime
-            push $self->{ _timing_norms }->[ -1 ], { hour => $h, minute => $m };
+            push @{ $self->{ _timing_norms }->[ -1 ] }, { hour => $h, minute => $m };
         }
     }
 
