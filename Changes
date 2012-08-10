@@ -1,6 +1,6 @@
 Revision history for perl module DateTime::BusinessHours
 
-2.00 TO BE RELEASED
+2.00 2012-08-09
  [BUG FIXES]
  - Added missing deps to Makefile.PL (RT #30787)
  - Proper calculation for ranges longer than 1 month (RT #39433)
