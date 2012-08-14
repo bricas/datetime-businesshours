@@ -1,5 +1,8 @@
 Revision history for perl module DateTime::BusinessHours
 
+2.01 2012-08-14
+ - Fix arrayref push for older perls
+
 2.00 2012-08-09
  [BUG FIXES]
  - Added missing deps to Makefile.PL (RT #30787)
@@ -9,7 +12,7 @@ Revision history for perl module DateTime::BusinessHours
 
  [ENHANCEMENTS]
  - Entirely rewritten from scratch
- - "worktiming" now take multiple hour specifications
+ - "worktiming" now takes multiple hour specifications
 
  [THINGS THAT MAY BREAK YOUR CODE]
  - Default business hours are now 9am to 5pm

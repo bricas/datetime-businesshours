@@ -11,7 +11,7 @@ use Class::MethodMaker [
     ],
 ];
 
-our $VERSION = '2.00';
+our $VERSION = '2.01';
 
 sub new {
     my ( $class, %args ) = @_;
@@ -274,14 +274,16 @@ You can also look for information at:
 
 Antano Solar John <solar345@gmail.com>
 
-=head1 COPYRIGHT
+=head1 MAINTAINER
 
-Copyright (c) 2007 Antano Solar John.  All rights reserved.  This
-program is free software; you can redistribute it and/or modify it
+Brian Cassidy <bricas@cpan.org>
+
+=head1 COPYRIGHT AND LICENSE
+
+Copyright (c) 2007-2011 Antano Solar John, 2012 by Brian Cassidy
+
+This library is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.
-
-The full text of the license can be found in the LICENSE file included
-with this module.
 
 =cut
 

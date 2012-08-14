@@ -13,6 +13,7 @@ WriteMakefile(
     AUTHOR              => 'Antano Solar <solar345@gmail.com>',
     VERSION_FROM        => 'lib/DateTime/BusinessHours.pm',
     ABSTRACT_FROM       => 'lib/DateTime/BusinessHours.pm',
+    MIN_PERL_VERSION    => '5.008001',
     (   eval { ExtUtils::MakeMaker->VERSION( 6.21 ) }
         ? ( LICENSE => 'perl' )
         : ()
