@@ -1,5 +1,8 @@
 Revision history for perl module DateTime::BusinessHours
 
+2.02 2012-11-30
+ - Fix silent modification of end date (RT #81551)
+
 2.01 2012-08-14
  - Fix arrayref push for older perls
 

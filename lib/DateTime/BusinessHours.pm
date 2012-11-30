@@ -11,7 +11,7 @@ use Class::MethodMaker [
     ],
 ];
 
-our $VERSION = '2.01';
+our $VERSION = '2.02';
 
 sub new {
     my ( $class, %args ) = @_;
