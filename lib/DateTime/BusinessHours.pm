@@ -89,7 +89,7 @@ sub _calculate {
     }
 
     # if start and end aren't on the same day
-    if( $d1->truncate( to => 'day' ) != $d2->truncate( to => 'day' ) ) {
+    if( $d1->truncate( to => 'day' ) != $d2->clone->truncate( to => 'day' ) ) {
         for( @{ $self->{ _timing_norms } } ) {
             last if $d2 <= $d2->clone->set( %{ $_->[ 0 ] } );
 
