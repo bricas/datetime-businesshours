@@ -4,14 +4,13 @@ use strict;
 use warnings;
 
 use DateTime;
-
 use Class::MethodMaker [
     scalar => [
         qw( datetime1 datetime2 worktiming weekends holidayfile holidays )
     ],
 ];
 
-our $VERSION = '2.02';
+our $VERSION = '2.03';
 
 sub new {
     my ( $class, %args ) = @_;
@@ -27,7 +26,14 @@ sub new {
         $args{ worktiming } = [ [ @{ $args{ worktiming } } ] ];
     }
 
-    return bless \%args, $class;
+    my $obj = bless \%args, $class;
+
+    # initialize holiday map on this object
+    $obj->_set_holidays();
+    my %holiday_map = map { $_ => 1 } grep { $_ ge $obj->datetime1->ymd && $_ le $obj->datetime2->ymd } @{$obj->holidays};
+    $obj->{_holiday_map} = \%holiday_map;
+
+    return $obj;
 }
 
 sub calculate {
@@ -44,9 +50,6 @@ sub _calculate {
 
     # number of hours in a work day
     my $length = $self->_calculate_day_length;
-    my @holidays = $self->_get_holidays;
-    my $weekend_re = join( '|', @{ $self->weekends } );
-
     my $d1 = $self->datetime1->clone;
     my $d2 = $self->datetime2->clone;
 
@@ -56,26 +59,21 @@ sub _calculate {
     my $start = $d1->clone->truncate( to => 'day' );
     my $end   = $d2->clone->truncate( to => 'day' );
 
-    my $s_ymd = $start->ymd;
-    my $e_ymd = $end->ymd;
-
-    my %holiday_map = map { $_ => 1 } grep { $_ ge $s_ymd && $_ le $e_ymd } @holidays;
-
     # deal with everything non-inclusive to the start/end
     $start->add( days => 1 );
     $end->subtract( days => 1 );
 
     while( $start <= $end ) {
-        if( $start->day_of_week !~ m{$weekend_re} && !exists $holiday_map{ $start->ymd } ) {
+        if( $self->_is_business_day($start) ) {
             $self->{ _result }->{ hours } += $length;
         }
-
         $start->add( days => 1 );
     }
 
     # handle start and end days
     for( reverse @{ $self->{ _timing_norms } } ) {
         last if $d1 >= $d1->clone->set( %{ $_->[ -1 ] } );
+        last if ! $self->_is_business_day($d1); #it's possible we start on a non-bus day
 
         my $r1 = $d1->clone->set( %{ $_->[ 0 ] } );
         my $r2 = $d1->clone->set( %{ $_->[ 1 ] } );
@@ -92,6 +90,7 @@ sub _calculate {
     if( $d1->truncate( to => 'day' ) != $d2->clone->truncate( to => 'day' ) ) {
         for( @{ $self->{ _timing_norms } } ) {
             last if $d2 <= $d2->clone->set( %{ $_->[ 0 ] } );
+            last if ! $self->_is_business_day($d2); #it's possible we end on a non-bus day
 
             my $r1 = $d2->clone->set( %{ $_->[ 0 ] } );
             my $r2 = $d2->clone->set( %{ $_->[ 1 ] } );
@@ -138,7 +137,7 @@ sub _calculate_day_length {
     return $self->{ _day_length };
 }
 
-sub _get_holidays {
+sub _set_holidays{
     my $self = shift;
 
     my @holidays = @{ $self->holidays };
@@ -150,7 +149,7 @@ sub _get_holidays {
         close $fh;
     }
 
-    return @holidays;
+    $self->{holidays} = \@holidays;
 }
 
 sub getdays {
@@ -159,6 +158,34 @@ sub getdays {
 
 sub gethours {
     return shift->_calculate->{ hours };
+}
+
+# return 1 if day is not a weekend and it's not a holiday
+# return 0 otherwise
+sub _is_business_day {
+  my $self = shift;
+  my $dt = shift;
+  return 0 if ($self->_is_weekend($dt) || $self->_is_holiday($dt));
+  return 1;
+}
+
+# Returns 1 if the datetime provided is a weekend day perl the weekend option
+# Returns 0 otherwise
+sub _is_weekend {
+  my $self = shift;
+  my $day_of_week  = (shift)->day_of_week;
+  for my $defined_we (@{$self->{weekends}}) {
+    return 1 if ($defined_we == $day_of_week);
+  }
+  return 0;
+}
+
+# Returns 1 if the datetime provided is in the holiday map
+sub _is_holiday {
+  my $self = shift;
+  my $date  = (shift)->ymd;
+
+  return exists($self->{_holiday_map}->{$date});
 }
 
 1;
