@@ -75,7 +75,8 @@ sub _calculate {
 
     # handle start and end days
     for( reverse @{ $self->{ _timing_norms } } ) {
-        last if $d1 >= $d1->clone->set( %{ $_->[ -1 ] } );
+        last if $d1 >= $d1->clone->set( %{ $_->[ 1 ] } ); #start >= end time of same day
+        last if $d2 <= $d1->clone->set( %{ $_->[ 0 ] } ); #end <= start time of same day
 
         my $r1 = $d1->clone->set( %{ $_->[ 0 ] } );
         my $r2 = $d1->clone->set( %{ $_->[ 1 ] } );
@@ -91,7 +92,8 @@ sub _calculate {
     # if start and end aren't on the same day
     if( $d1->truncate( to => 'day' ) != $d2->clone->truncate( to => 'day' ) ) {
         for( @{ $self->{ _timing_norms } } ) {
-            last if $d2 <= $d2->clone->set( %{ $_->[ 0 ] } );
+            last if $d2 <= $d2->clone->set( %{ $_->[ 0 ] } ); #end <= start of same day
+            last if $d1 >= $d2->clone->set( %{ $_->[ 1 ] } ); #start >= end of same day
 
             my $r1 = $d2->clone->set( %{ $_->[ 0 ] } );
             my $r2 = $d2->clone->set( %{ $_->[ 1 ] } );
