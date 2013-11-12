@@ -30,7 +30,9 @@ sub new {
 
     # initialize holiday map on this object
     $obj->_set_holidays();
-    my %holiday_map = map { $_ => 1 } grep { $_ ge $obj->datetime1->ymd && $_ le $obj->datetime2->ymd } @{$obj->holidays};
+    my %holiday_map = map { $_ => 1 }
+        grep { $_ ge $obj->datetime1->ymd && $_ le $obj->datetime2->ymd }
+        @{$obj->holidays};
     $obj->{_holiday_map} = \%holiday_map;
 
     return $obj;
@@ -309,7 +311,7 @@ Brian Cassidy <bricas@cpan.org>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (c) 2007-2011 Antano Solar John, 2012 by Brian Cassidy
+Copyright (c) 2007-2011 Antano Solar John, 2012-2013 by Brian Cassidy
 
 This library is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.

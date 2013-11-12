@@ -1,5 +1,9 @@
 Revision history for perl module DateTime::BusinessHours
 
+2.03 2013-11-12
+ - Fix for interval outside of working hours (RT #85292; fixed by xmikew)
+ - Fix for weekends (RT #82342; fixed by xmikew)
+
 2.02 2012-11-30
  - Fix silent modification of end date (RT #81551)
 
